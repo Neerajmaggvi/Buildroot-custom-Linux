@@ -159,7 +159,7 @@ ssh root@localhost -p 2222
 
 ### SSH Login
 
-![image alt](screenshots/ssh_working.png) 
+![image alt](https://github.com/Neerajmaggvi/Buildroot-custom-Linux/blob/495807c7b76a528b60f3915596f1a237a2011f1d/SSH%20Login.png) 
 
 ---
 
