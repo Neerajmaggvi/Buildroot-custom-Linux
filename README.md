@@ -155,7 +155,7 @@ ssh root@localhost -p 2222
 
 ### Boot Process
 
-![image alt](screenshots/system_info.png)
+![image alt](https://github.com/Neerajmaggvi/Buildroot-custom-Linux/blob/5c7f4325382690e966eaf3d7348bfa94d88827af/Boot%20process.png) 
 
 ### SSH Login
 
