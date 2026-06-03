@@ -1,25 +1,215 @@
-Buildroot is a simple, efficient and easy-to-use tool to generate embedded
-Linux systems through cross-compilation.
+# Custom Embedded Linux with Buildroot
 
-The documentation can be found in docs/manual. You can generate a text
-document with 'make manual-text' and read output/docs/manual/manual.text.
-Online documentation can be found at http://buildroot.org/docs.html
+A minimal custom Linux image built from scratch using Buildroot, targeting ARM architecture and booted on QEMU emulator. Includes a custom init script, SSH access via Dropbear, and a fully assembled root filesystem.
 
-To build and use the buildroot stuff, do the following:
+---
 
-1) run 'make menuconfig'
-2) select the target architecture and the packages you wish to compile
-3) run 'make'
-4) wait while it compiles
-5) find the kernel, bootloader, root filesystem, etc. in output/images
+## What This Project Does
 
-You do not need to be root to build or run buildroot.  Have fun!
+- Builds a complete Linux system from source using Buildroot
+- Cross-compiles everything for ARM (armv7l) on an x86-64 host machine
+- Boots the image on a QEMU ARM VExpress emulator
+- Runs a custom init script at boot
+- Exposes SSH access via Dropbear
 
-Buildroot comes with a basic configuration for a number of boards. Run
-'make list-defconfigs' to view the list of provided configurations.
+---
 
-Please feed suggestions, bug reports, insults, and bribes back to the
-buildroot mailing list: buildroot@buildroot.org
-You can also find us on #buildroot on OFTC IRC.
+## System Overview
+
+| Component | Details |
+|---|---|
+| Build system | Buildroot 2024.02 |
+| Target architecture | ARM (armv7l) |
+| Board | QEMU VExpress-A9 |
+| Kernel | Linux 6.1.44 |
+| Init system | BusyBox init |
+| SSH server | Dropbear |
+| Host machine | Ubuntu 22.04 (x86-64) |
+
+---
+
+## Boot Sequence
+
+```text
+QEMU (emulates ARM hardware)
+  └── Linux kernel (zImage)
+        └── Mounts rootfs (rootfs.ext2)
+              └── BusyBox init (PID 1)
+                    └── Runs /etc/init.d/S99hello (custom script)
+                          └── Starts Dropbear SSH server
+```
+
+---
+
+## Project Structure
+
+```text
+buildroot/
+├── .config
+└── board/
+    └── raspberrypi/
+        └── rootfs_overlay/
+            └── etc/
+                └── init.d/
+                    └── S99hello
+```
+
+---
+
+## Custom Init Script
+
+Located at `board/raspberrypi/rootfs_overlay/etc/init.d/S99hello`
+
+```sh
+#!/bin/sh
+
+case "$1" in
+  start)
+    echo "Hello from my custom init script" > /dev/console
+    ;;
+  stop)
+    echo "Stopping" > /dev/console
+    ;;
+esac
+```
+
+BusyBox init runs all scripts in `/etc/init.d/` at boot. Scripts prefixed with `S` are start scripts. `99` means this runs last, after all other services are up.
+
+---
+
+## How to Build
+
+### 1. Install dependencies
+
+```bash
+sudo apt install -y build-essential git wget unzip bc cpio \
+  libncurses-dev libssl-dev rsync file python3 qemu-utils
+```
+
+### 2. Clone Buildroot
+
+```bash
+git clone https://git.buildroot.net/buildroot --depth=1 --branch 2024.02 ~/buildroot
+cd ~/buildroot
+```
+
+### 3. Load config
+
+```bash
+make qemu_arm_vexpress_defconfig
+```
+
+### 4. Configure
+
+```bash
+make menuconfig
+```
+
+Changes made:
+
+- `Target packages → Networking applications → dropbear [*]`
+- `System configuration → Root password → <your password>`
+- `System configuration → Root filesystem overlay → board/raspberrypi/rootfs_overlay`
+
+### 5. Build
+
+```bash
+make -j$(nproc)
+```
+
+Output files will be generated in:
+
+```text
+output/images/
+```
+
+---
+
+## How to Run
+
+```bash
+cd output/images
+
+qemu-system-arm -M vexpress-a9 -smp 1 -m 256 \
+  -kernel zImage \
+  -dtb vexpress-v2p-ca9.dtb \
+  -drive file=rootfs.ext2,if=sd,format=raw \
+  -append "console=ttyAMA0,115200 rootwait root=/dev/mmcblk0" \
+  -nographic \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-device,netdev=net0
+```
+
+Login with:
+
+```text
+Username: root
+Password: <password set in menuconfig>
+```
+
+---
+
+## SSH Access
+
+Open a new terminal on the host machine:
+
+```bash
+ssh root@localhost -p 2222
+```
+
+---
+
+## Screenshots
+
+### SSH into the custom Linux system
+
+![SSH working](screenshots/ssh_working.png)
+
+### System info inside the booted image
+
+![System info](screenshots/system_info.png)
+
+---
+
+## Key Concepts Learned
+
+### Cross-compilation
+Compiling ARM binaries on an x86-64 machine using a cross-compiler such as:
+
+```bash
+arm-linux-gnueabihf-gcc
+```
+
+### Boot Sequence
+Understanding how:
+
+```text
+QEMU → Kernel → Init → Shell
+```
+
+works during system startup.
+
+### BusyBox Init
+Learning how PID 1 operates and how `inittab` and `init.d` scripts are executed.
+
+### Root Filesystem
+Understanding how Buildroot assembles directories such as:
+
+```text
+/bin
+/etc
+/dev
+```
+
+into a bootable filesystem image.
+
+### Device Tree
+Learning how the Linux kernel discovers hardware using the `.dtb` file.
+
+---
+
+## Author
+
+**Neeraj**
 
 
