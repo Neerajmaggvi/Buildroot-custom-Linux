@@ -155,11 +155,11 @@ ssh root@localhost -p 2222
 
 ### Boot Process
 
-![Boot Output](screenshots/system_info.png)
+![image alt](screenshots/system_info.png)
 
 ### SSH Login
 
-![SSH Access](screenshots/ssh_working.png)
+![image alt](screenshots/ssh_working.png) 
 
 ---
 
